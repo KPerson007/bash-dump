@@ -1,0 +1,5 @@
+#!/bin/bash
+cd /boot
+sudo cp vmlinuz-linux efi/vmlinuz-linux
+sudo cp initramfs-linux-fallback.img efi/initramfs-linux-fallback.img
+sudo cp initramfs-linux.img efi/initramfs-linux.img
