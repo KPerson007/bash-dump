@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# check number of args is valid
+if [ $# -ge 2 ]; then
+  # save the driver to be executed then shift arguments
+  num=$1
+  shift
+  
+  # perform a make to get things up to date
+  make Driver$num >& /dev/null
+
+  # iterate through all files
+  while [ $# -ge 1 ];
+  do
+    echo "Testing file $1"
+    ./Driver$num -x < $1 >& output
+    ~/../public/hw6/Driver1 -x < $1 >& expected
+    compare=`diff output expected`
+
+    # check if diff output is empty, meaning test passed
+    if [ "$compare" = "" ]; then
+      echo -e "\tTest passed!"
+    else
+      echo -e "\tTest failed!"
+      format=`echo "$compare" | sed -e 's/^/\t/'`
+      echo "$format"
+    fi
+    shift
+  done
+else
+  echo "Not enough arguments!"
+  echo -e "\tUsage: test [driver_num] [input_file(s)]"
+fi

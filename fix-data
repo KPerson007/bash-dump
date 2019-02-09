@@ -1,3 +1,4 @@
 #!/bin/bash
+# use this script after rebooting into Linux after using Windows if there is a problem with an NTFS volume
 sudo ntfsfix /dev/sda2
 sudo mount -a

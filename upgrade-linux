@@ -1,4 +1,5 @@
 #!/bin/bash
+# this script can be used to copy new kernel images to the correct place
 cd /boot
 sudo cp vmlinuz-linux efi/vmlinuz-linux
 sudo cp initramfs-linux-fallback.img efi/initramfs-linux-fallback.img
