@@ -1,0 +1,19 @@
+#!/bin/bash
+# perform a make to get things up to date
+make &> /dev/null
+# get the assignment number based on current directory name
+assignment=${PWD##*/}
+echo "Testing with arguments $@"
+./$assignment $@ &> MYSOL
+~/../public/${assignment}test $@ &> REFSOL
+compare=`diff MYSOL REFSOL`
+# check if diff output is empty, meaning test passed
+if [ -z "$compare" ]; then
+	echo -e "\tTest passed!"
+else
+	echo -e "\tTest failed!"
+	format=`echo "$compare" | sed -e 's/^/\t/'`
+	echo "$format"
+fi
+rm MYSOL &> /dev/null
+rm REFSOL &> /dev/null

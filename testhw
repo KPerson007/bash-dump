@@ -1,0 +1,151 @@
+#!/bin/bash
+# NOTE: this script must be placed in the assignment directory for the
+# assignment you want to test.
+
+function script_help {
+  echo -e "Usage: $1 [options] [executable_name] [input_file(s)]"
+  echo -e "Options:"
+  echo -e "\t-x: also compare debug messages"
+  echo -e "\t-k: don't remove the files used for diffing output"
+  echo -e "\t-f: for hw9, run \"make fresh\" before each test"
+  echo -e "\t-j: use this when testing a Java driver"
+  echo -e "\t-h: display this help message"
+  echo ""
+  echo -e "The executable name can be any of the valid executable"\
+          "names for that assignment such as \"Driver2\", \"Calc\", etc"
+  echo -e "Any number of input files greater than or equal to one file."\
+          "can be passed in, all will be tested."
+}
+
+# parse options
+debug=""
+cleanup="t"
+fresh="f"
+java="f"
+while getopts "xkfjh" arg $@; do
+  case $arg in
+    x) debug="-x ";;
+    k) cleanup="f";;
+    f) fresh="t";;
+    j) java="t";;
+    h) script_help $0; exit 0;;
+    /?)break;;
+  esac
+done
+
+# Remove parsed option flags
+shift $((OPTIND - 1))
+
+# check number of args is valid
+if [ $# -ge 2 ]; then
+  total=0
+  passed=0
+  failed=0
+  
+  if ! [ -d temp ]; then
+    mkdir temp >& /dev/null
+  fi
+  
+  # get the assignment number based on current directory name
+  assignment=${PWD##*/}
+
+  # save the executable to be executed then shift arguments
+  exe=$1
+  shift
+  
+  # if using Driver2 (java), then add some args to diff to ignore whitespace
+  args=""
+  public_exe=$exe
+
+  if [ $java = "t" ]; then
+    echo "Using extra arguments on diff for testing Java output."
+    echo "Note: due to the C/C++ drivers doing manual deallocation, tests"\
+         "might \"fail\" due to the extra debug messages. The test can still"\
+         "be considered \"passing\" if the only differences have to do with"\
+         "these extra messages."
+    args="-T -w "
+    public_exe="Driver1"
+  fi
+
+  # perform a make to get things up to date
+  make $exe >& /dev/null
+
+  # iterate through all files
+  while [ $# -ge 1 ];
+  do
+    total=$((total + 1))
+
+    # do fresh for hw9
+    if [ $assignment = "hw9" ] && [ $fresh = "t" ]; then
+      make fresh >& /dev/null
+    fi
+    
+    echo "Testing using file $1"
+    ./$exe $debug< $1 >& temp/output
+    
+    temppub="temp/"
+    parentpub=""
+    # for hw9, use separate dir for testing public executable
+    if [ $assignment = "hw9" ]; then
+      cd temp
+      temppub=""
+      parentpub="../"
+
+      if [ $fresh = "t" ]; then
+        rm -f Calc.datafile Driver.datafile
+        touch Calc.datafile
+        touch Driver.datafile
+      fi
+    fi
+
+    tester=""
+    # settings for CSE 12 testers
+    if [[ $USER =~ ^cs12 ]]; then
+      tester="\\$public_exe"
+    elif [[ $USER =~ ^cs30 ]]; then
+      tester="test"
+    fi
+
+    ~/../public/${assignment}${tester} $debug< $parentpub$1 >& \
+    ${temppub}expected
+
+    # cd back
+    if [ $assignment = "hw9" ]; then
+      cd ..
+    fi
+
+    compare=`diff ${args}temp/output temp/expected`
+
+    # check if diff output is empty, meaning test passed
+    if [ -z "$compare" ]; then
+      passed=$((passed + 1))
+      echo -e "\tTest passed!"
+    else
+      failed=$((failed + 1))
+      echo -e "\tTest failed!"
+      format=`echo "$compare" | sed -e 's/^/\t/'`
+      echo "$format"
+    fi
+    shift
+  done
+  
+  # do some cleanup if necessary
+  if [ $cleanup = "t" ]; then
+    # remove temp files
+    rm -r temp/ >& /dev/null
+
+    # do fresh for hw9
+    if [ $assignment = "hw9" ] && [ $fresh = "t" ]; then
+      make fresh >& /dev/null
+    fi
+  fi
+
+  # print overall results
+  echo -e "\nTotal Tests Ran: $total"
+  echo "Passed: $passed, Failed: $failed"
+else
+  echo "Not enough arguments!"
+  echo ""
+  script_help $0
+fi
+
