@@ -9,6 +9,9 @@ function script_help {
   echo -e "\t-k: don't remove the files used for diffing output"
   echo -e "\t-f: for hw9, run \"make fresh\" before each test"
   echo -e "\t-j: use this when testing a Java driver"
+  echo -e "\t-a: use \"arg test mode\" where, instead of arguments after the"\
+          "executable name being interpreted as files for redirecting stdin,"\
+	  "the arguments are passed directly to the executable"
   echo -e "\t-h: display this help message"
   echo ""
   echo -e "The executable name can be any of the valid executable"\
@@ -22,12 +25,14 @@ debug=""
 cleanup="t"
 fresh="f"
 java="f"
-while getopts "xkfjh" arg $@; do
+argmode="f"
+while getopts "xkfjah" arg $@; do
   case $arg in
     x) debug="-x ";;
     k) cleanup="f";;
     f) fresh="t";;
     j) java="t";;
+    a) argmode="t";;
     h) script_help $0; exit 0;;
     /?)break;;
   esac
@@ -37,7 +42,7 @@ done
 shift $((OPTIND - 1))
 
 # check number of args is valid
-if [ $# -ge 2 ]; then
+if [ $# -ge 2 ] || [ $argmode = "t" ]; then
   total=0
   passed=0
   failed=0
@@ -70,8 +75,9 @@ if [ $# -ge 2 ]; then
   # perform a make to get things up to date
   make $exe >& /dev/null
 
+  continue="t"
   # iterate through all files
-  while [ $# -ge 1 ];
+  while [ $continue = "t" ];
   do
     total=$((total + 1))
 
@@ -80,8 +86,13 @@ if [ $# -ge 2 ]; then
       make fresh >& /dev/null
     fi
     
-    echo "Testing using file $1"
-    ./$exe $debug< $1 >& temp/output
+    if [ $argmode = "t" ]; then 
+      echo "Testing with arguments $@"
+      ./$exe $debug$@ >& temp/output
+    else
+      echo "Testing using file $1"
+      ./$exe $debug< $1 >& temp/output
+    fi
     
     temppub="temp/"
     parentpub=""
@@ -106,8 +117,13 @@ if [ $# -ge 2 ]; then
       tester="test"
     fi
 
-    ~/../public/${assignment}${tester} $debug< $parentpub$1 >& \
-    ${temppub}expected
+    if [ $argmode = "t" ]; then
+      ~/../public/${assignment}${tester} $debug$@ >& \
+      ${temppub}expected
+    else
+      ~/../public/${assignment}${tester} $debug< $parentpub$1 >& \
+      ${temppub}expected
+    fi
 
     # cd back
     if [ $assignment = "hw9" ]; then
@@ -126,7 +142,16 @@ if [ $# -ge 2 ]; then
       format=`echo "$compare" | sed -e 's/^/\t/'`
       echo "$format"
     fi
-    shift
+
+    if [ $argmode = "t" ]; then
+      continue="f"
+    else
+      # shift once
+      shift
+      if [ $# -lt 1 ]; then
+        continue="f"
+      fi
+    fi
   done
   
   # do some cleanup if necessary
