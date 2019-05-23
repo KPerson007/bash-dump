@@ -12,6 +12,8 @@ function script_help {
   echo -e "\t-a: use \"arg test mode\" where, instead of arguments after the"\
           "executable name being interpreted as files for redirecting stdin,"\
 	  "the arguments are passed directly to the executable"
+  echo -e "\t-e: use the first argument after executable_name as extra args"\
+          "to both your program and the tester program"
   echo -e "\t-h: display this help message"
   echo ""
   echo -e "The executable name can be any of the valid executable"\
@@ -26,13 +28,15 @@ cleanup="t"
 fresh="f"
 java="f"
 argmode="f"
-while getopts "xkfjah" arg $@; do
+extraarg="f"
+while getopts "xkfjaeh" arg $@; do
   case $arg in
     x) debug="-x ";;
     k) cleanup="f";;
     f) fresh="t";;
     j) java="t";;
     a) argmode="t";;
+    e) extraarg="t";;
     h) script_help $0; exit 0;;
     /?)break;;
   esac
@@ -75,6 +79,13 @@ if [ $# -ge 2 ] || [ $argmode = "t" ]; then
   # perform a make to get things up to date
   make $exe >& /dev/null
 
+  extra=""
+  if [ $extraarg = "t" ]; then
+    # save an arg and shift
+    extra=$1
+    shift
+  fi
+
   continue="t"
   # iterate through all files
   while [ $continue = "t" ];
@@ -91,7 +102,7 @@ if [ $# -ge 2 ] || [ $argmode = "t" ]; then
       ./$exe $debug$@ >& temp/output
     else
       echo "Testing using file $1"
-      ./$exe $debug< $1 >& temp/output
+      ./$exe ${extra}${debug}< $1 >& temp/output
     fi
     
     temppub="temp/"
@@ -121,7 +132,7 @@ if [ $# -ge 2 ] || [ $argmode = "t" ]; then
       ~/../public/${assignment}${tester} $debug$@ >& \
       ${temppub}expected
     else
-      ~/../public/${assignment}${tester} $debug< $parentpub$1 >& \
+      ~/../public/${assignment}${tester} ${extra}$debug< $parentpub$1 >& \
       ${temppub}expected
     fi
 
@@ -173,4 +184,3 @@ else
   echo ""
   script_help $0
 fi
-
