@@ -107,7 +107,7 @@ if [ $# -ge 2 ] || [ $argmode = "t" ]; then
     
     temppub="temp/"
     parentpub=""
-    # for hw9, use separate dir for testing public executable
+    # for CSE 12 hw9, use separate dir for testing public executable
     if [ $assignment = "hw9" ]; then
       cd temp
       temppub=""
@@ -118,6 +118,11 @@ if [ $# -ge 2 ] || [ $argmode = "t" ]; then
         touch Calc.datafile
         touch Driver.datafile
       fi
+    fi
+
+    # for CSE 30 pa4, use "mygrep" as assignment name
+    if [ $assignment = "pa4" ]; then
+      assignment="mygrep"
     fi
 
     tester=""
